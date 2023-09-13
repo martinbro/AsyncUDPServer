@@ -7,78 +7,75 @@
  * Martin dec 2022
  */
 
-#include <WiFi.h>
+#include "WiFi.h"
 #include "AsyncUDP.h"
-#include "esp_wifi.h"
- 
-// const char* wifi_network_ssid = "yourNetworkName";
-// const char* wifi_network_password =  "yourNetworkPassword";
- 
+// #include "WiFiUdp.h" er allerede importeret i WiFi.h
+
 const char* soft_ap_ssid = "MyESP32AP";
 const char* soft_ap_password = "testpassword";
 
+// Tildeler fast Ip-adresse til at identificere 'modulet' 
+IPAddress local_IP(192, 168, 4, 1); 
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 0, 0);
 
-//The udp library class
-// WiFiUDP udp;
+//Definerer namespaces
+WiFiUDP UDP;
 AsyncUDP udp;
- 
+
 void setup() {
- 
-  Serial.begin(115200);
-  while (!Serial){ delay(10);}
+    //0. starter seriel kommunikation
+    Serial.begin(115200);
+    while (!Serial){ delay(10);}
   
-  // WiFi.mode(WIFI_MODE_APSTA);
-  WiFi.mode(WIFI_AP_STA);
-  esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_LR );
-  
-  WiFi.softAP(soft_ap_ssid, soft_ap_password);
-  //API: bool softAP(const char* ssid, const char* passphrase = NULL, int channel = 1, int ssid_hidden = 0, int max_connection = 4, bool ftm_responder = false);
-  
-  // WiFi.begin(wifi_network_ssid, wifi_network_password);
-  // Serial.print("Connecting to WiFi");
-  // while (WiFi.status() != WL_CONNECTED) {
-  //   delay(100);
-  //   Serial.print(".");
-  // }
-  // Serial.printf("\nConnected\n");
-  Serial.print("ESP32 IP as soft AP: ");
-  Serial.println(WiFi.softAPIP());
- 
-  Serial.print("ESP32 IP on the WiFi network: ");
-  // Serial.println(WiFi.localIP());
-  
-    if(udp.listen(1234)) {
+    // 1. Sætter lokal access point op. Formålet er at kommunikere med de andre ESPér
+     WiFi.mode(WIFI_AP_STA);
+
+    // 2. sætter den faste IPadresse op defineret ovenfor 
+    if (!WiFi.config(local_IP, gateway, subnet)) {
+        Serial.println("STA Failed to configure");
+        //ESP.restart(); //Respons 'Erlang-style'
+    }
+    
+    // 3. Starter accespoint
+    WiFi.softAP(soft_ap_ssid, soft_ap_password);
+   
+    // 4. lytter efter indkommen beskeder på port:1234
+    if(udp.listen(WiFi.localIP(),1234)) {
         Serial.print("UDP Listening on IP: ");
         Serial.println(WiFi.localIP());
+        // 5. håndterer indkomne beskeder:
         udp.onPacket([](AsyncUDPPacket packet) {
+            
+            // Printer udvalgte metadata til testbrug
             Serial.print(", From: ");
             Serial.print(packet.remoteIP());
             Serial.print(":");
             Serial.print(packet.remotePort());
             Serial.print(", Data: ");
+            //Den kritiske info -
+            // Anvender Serial.write() da packet.data er i det bineære kode-format: uint8_t  
             Serial.write(packet.data(), packet.length());
-            
             Serial.println();
-            //reply to the client
-            //packet.printf("Got %u bytes of data", packet.length());
+
+            // evt auto svar/verificering til klienten:
+            // packet.printf("Modtog %u bytes data", packet.length());
         });
     }
-
 }
 
-char buf[64]; //allokeret 64 byte plads til i en charbuffer til metode 1 `broadcastTo()`
 void loop()
 {
-  //Send broadcast:
-  //Metode 1: null termination af strengen '\0' ved at 
-  String s =  "Anyone here?"; //her 12 + 1 = 13 byte incl null termination 
-  s.toCharArray(buf, sizeof(buf)); // converterer string to chararray - automatisk null termination 
-  udp.broadcastTo(buf,12345);//send besked til port 12345
-  delay(10);
-  char mystring[9] = "Hva så?";
-  delay(3000);//NB! ALDRIG delay i produktions code
-    
-  //Metode 2: manuel null termination af strengen - dvs tilføj til strengen'\0'
-    udp.broadcastTo("123456789\0",12345);
+    delay(1000);//ALDRIG delay i produktion
+
+    //Broadcast: til alle ESPer på port: 22345
+    udp.broadcastTo("Dav fra server!",22345);
+
+    delay(1000);//ALDRIG delay i produktion
+    //unicast til IP "192.168.4.3" og port 22345
+    UDP.beginPacket("192.168.4.3",22345);
+    UDP.print("Unicast Besked fra Esp32 server");
+    UDP.endPacket();
+
 }
 
