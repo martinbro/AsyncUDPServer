@@ -55,7 +55,19 @@ void setup() {
             Serial.print(", Data: ");
             //Den kritiske info -
             // Anvender Serial.write() da packet.data er i det bineære kode-format: uint8_t  
-            Serial.write(packet.data(), packet.length());
+            // Serial.write(packet.data(), packet.length());
+
+            if (packet.length() > 0)
+            {
+                char buffer[packet.length()];
+                // sprintf(buffer, "%s", packet.data());
+                // buffer[packet.length()] ='\0';// unicast er ikke '\0' terminated    
+                // Serial.printf("%s - %i\n",buffer,packet.length());
+                   
+                String testString = String( (char*) packet.data());
+                // buffer[packet.length()] ='\0';// unicast er ikke '\0' terminated    
+                Serial.println(testString);
+            }
             Serial.println();
 
             // evt auto svar/verificering til klienten:
@@ -74,6 +86,7 @@ void loop()
     delay(1000);//ALDRIG delay i produktion
     //unicast til IP "192.168.4.3" og port 22345
     UDP.beginPacket("192.168.4.3",22345);
+    // UDP.print("Unicast Besked fra Esp32 server"+'\0');
     UDP.print("Unicast Besked fra Esp32 server");
     UDP.endPacket();
 
