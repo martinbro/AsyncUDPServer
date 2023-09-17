@@ -60,12 +60,8 @@ void setup() {
             if (packet.length() > 0)
             {
                 char buffer[packet.length()];
-                // sprintf(buffer, "%s", packet.data());
-                // buffer[packet.length()] ='\0';// unicast er ikke '\0' terminated    
-                // Serial.printf("%s - %i\n",buffer,packet.length());
                    
-                String testString = String( (char*) packet.data());
-                // buffer[packet.length()] ='\0';// unicast er ikke '\0' terminated    
+                String testString = String( (char*) packet.data()); 
                 Serial.println(testString);
             }
             Serial.println();
@@ -86,7 +82,6 @@ void loop()
     delay(1000);//ALDRIG delay i produktion
     //unicast til IP "192.168.4.3" og port 22345
     UDP.beginPacket("192.168.4.3",22345);
-    // UDP.print("Unicast Besked fra Esp32 server"+'\0');
     UDP.print("Unicast Besked fra Esp32 server");
     UDP.endPacket();
 
