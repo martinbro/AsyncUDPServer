@@ -29,7 +29,7 @@ void setup() {
     while (!Serial){ delay(10);}
   
     // 1. Sætter lokal access point op. Formålet er at kommunikere med de andre ESPér
-     WiFi.mode(WIFI_AP_STA);
+     WiFi.mode(WIFI_AP);
 
     // 2. sætter den faste IPadresse op defineret ovenfor 
     if (!WiFi.config(local_IP, gateway, subnet)) {
@@ -59,10 +59,14 @@ void setup() {
 
             if (packet.length() > 0)
             {
-                char buffer[packet.length()];
-                   
-                String testString = String( (char*) packet.data()); 
-                Serial.println(testString);
+                // char buffer[packet.length()+1];
+                // //cast´er fra byte-array til char-array
+                // sprintf(buffer, "%s", packet.data());
+                // buffer[packet.length()] ='\0';// unicast er ikke '\0' terminated    
+                // Serial.println(buffer);
+                // Hvis vi KUN bruger broadcast
+                String testString = String( (char*) packet.data());
+                Serial.println(testString.toFloat()+1);
             }
             Serial.println();
 
@@ -70,18 +74,32 @@ void setup() {
             // packet.printf("Modtog %u bytes data", packet.length());
         });
     }
+
+
 }
 
 void loop()
 {
-    delay(1000);//ALDRIG delay i produktion
+    delay(17);//ALDRIG delay i produktion
 
     //Broadcast: til alle ESPer på port: 22345
     udp.broadcastTo("Dav fra server!",22345);
+    udp.broadcastTo("42",22345);
 
-    delay(1000);//ALDRIG delay i produktion
-    //unicast til IP "192.168.4.3" og port 22345
+    delay(530);//ALDRIG delay i produktion
+    //unicast til IP "192.168.4.2" og port 22345
+    
+    // udp.beginPacket("192.168.4.3",22345);
+    //
+    // send to UDP
+    //
+    const uint8_t address[] = {192,168,4,3}; // replace with UDP IP address
+    udp.connect(IPAddress(address),22345);
+    udp.print("dette er en unicast string fra server");
+    udp.close();
+
     UDP.beginPacket("192.168.4.3",22345);
+    // UDP.print("Unicast Besked fra Esp32 server"+'\0');
     UDP.print("Unicast Besked fra Esp32 server");
     UDP.endPacket();
 
